@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">JARVIS AI</string>
+    <string name="recognition_description">JARVIS local assistant recognition provider</string>
+</resources>
