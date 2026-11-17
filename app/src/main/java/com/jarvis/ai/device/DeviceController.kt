@@ -30,6 +30,23 @@ class DeviceController(private val context: Context) {
                 command.contains("sound settings") || command.contains("volume settings") -> {
                     open(Intent(Settings.ACTION_SOUND_SETTINGS)); "Opening sound settings."
                 }
+                command.contains("do not disturb") || command.contains("dnd settings") -> {
+                    open(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)); "Opening Do Not Disturb access settings."
+                }
+                command.startsWith("call ") -> {
+                    val number = rawCommand.substringAfter("call ").trim()
+                    if (number.isBlank()) "Tell me which number to call." else {
+                        open(Intent(Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + android.net.Uri.encode(number))))
+                        "Opening the dialer. Review the number and tap call when ready."
+                    }
+                }
+                command.startsWith("text ") || command.startsWith("send sms ") -> {
+                    val body = rawCommand.substringAfter("text ", rawCommand.substringAfter("send sms ", "")).trim()
+                    val intent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("smsto:"))
+                        .putExtra("sms_body", body)
+                    open(intent)
+                    "Opening your messaging app. Review and send the message yourself."
+                }
                 command.contains("battery settings") -> {
                     open(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)); "Opening battery settings."
                 }
@@ -42,7 +59,7 @@ class DeviceController(private val context: Context) {
                 command.startsWith("set an alarm") || command.startsWith("set alarm") -> setAlarm(command)
                 command.startsWith("open app ") -> launchApp(rawCommand.substringAfter("open app ", "").trim())
                 command.startsWith("launch app ") -> launchApp(rawCommand.substringAfter("launch app ", "").trim())
-                command.startsWith("open ") -> launchKnownApp(rawCommand.substringAfter("open ").trim())
+                command.startsWith("open ") -> launchKnownApp(rawCommand.substringAfter("open ").trim()) ?: launchApp(rawCommand.substringAfter("open ").trim())
                 command.contains("open notifications") || command == "notifications" -> {
                     open(Intent(Settings.ACTION_NOTIFICATION_SETTINGS)); "Opening notification settings."
                 }
