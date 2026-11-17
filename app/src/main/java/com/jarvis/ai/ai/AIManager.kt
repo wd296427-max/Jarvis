@@ -58,7 +58,7 @@ class AIManager(context: Context) {
                 .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", systemPrompt))))
                 .put("contents", contents)
             request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
+                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent")
                 .addHeader("x-goog-api-key", key)
                 .post(payload.toString().toRequestBody(jsonType)).build()
         } else {
