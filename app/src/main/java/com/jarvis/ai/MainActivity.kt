@@ -84,16 +84,21 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
     val context = LocalContext.current
     val ai = remember { AIManager(context.applicationContext) }
     val scope = rememberCoroutineScope()
-    var provider by remember { mutableStateOf(AIProvider.GEMINI) }
+    var provider by remember { mutableStateOf(ai.activeProvider()) }
     var apiKey by remember { mutableStateOf("") }
     var keySaved by remember { mutableStateOf(false) }
     var prompt by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var listening by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("SYSTEM ONLINE • READY") }
-    val messages = remember { mutableStateListOf(
-        ChatMessage("JARVIS", "Good day. I am online. Choose Gemini or OpenAI, save your API key, and start a conversation.")
-    ) }
+    val messages = remember {
+        mutableStateListOf<ChatMessage>().apply {
+            ai.recentConversation().forEach { (role, text) ->
+                add(ChatMessage(if (role == "assistant") "JARVIS" else "YOU", text))
+            }
+            if (isEmpty()) add(ChatMessage("JARVIS", "Good day. I am online. Choose Gemini or OpenAI, save your API key, and start a conversation."))
+        }
+    }
 
     val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -142,10 +147,10 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
                     Text("AI ENGINE", color = Cyan, style = MaterialTheme.typography.labelLarge)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(selected = provider == AIProvider.GEMINI, onClick = {
-                            provider = AIProvider.GEMINI; apiKey = ""; keySaved = false
+                            provider = AIProvider.GEMINI; ai.setActiveProvider(provider); apiKey = ""; keySaved = false
                         }, label = { Text("Gemini") })
                         FilterChip(selected = provider == AIProvider.OPENAI, onClick = {
-                            provider = AIProvider.OPENAI; apiKey = ""; keySaved = false
+                            provider = AIProvider.OPENAI; ai.setActiveProvider(provider); apiKey = ""; keySaved = false
                         }, label = { Text("OpenAI") })
                         Spacer(Modifier.weight(1f))
                         Text(if (keySaved || ai.hasApiKey(provider)) "KEY SAVED" else "NO KEY", color = if (keySaved || ai.hasApiKey(provider)) Cyan else Color.LightGray, style = MaterialTheme.typography.labelSmall)
@@ -159,7 +164,12 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Stored encrypted on this device", color = Color.LightGray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text("API key encrypted on device", color = Color.LightGray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        TextButton(onClick = {
+                            ai.clearMemory()
+                            messages.clear()
+                            messages.add(ChatMessage("JARVIS", "Local conversation memory cleared."))
+                        }) { Text("Clear memory", color = Cyan) }
                         Button(
                             enabled = apiKey.isNotBlank(),
                             onClick = {
