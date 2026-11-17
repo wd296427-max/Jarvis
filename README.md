@@ -48,7 +48,7 @@ The GitHub Actions workflow builds a debug APK on pushes to `main` and can be ru
 
 Install the debug APK on an Android device. Create an API key at https://openrouter.ai/keys, enter it in JARVIS and save it. The default model is openai/gpt-4o-mini; requests use OpenRouter's chat completions API. Start the voice listener switch and grant microphone/notification permissions. Grant camera permission if you want flashlight control. Cloud AI requests require internet access and a valid provider API key.
 
-"Independent phone operation" means the app runs on the phone without a PC. OpenRouter are cloud services, so AI conversations require internet access; this build is not an offline LLM.
+"Independent phone operation" means the app runs on the phone without a PC. OpenRouter is a cloud service, so AI conversations require internet access; this build is not an offline LLM.
 
 ## Upstream attribution and license
 
