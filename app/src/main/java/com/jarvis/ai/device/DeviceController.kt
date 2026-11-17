@@ -2,6 +2,10 @@ package com.jarvis.ai.device
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.media.AudioManager
 import android.provider.AlarmClock
 import android.provider.Settings
 import java.util.Locale
@@ -47,6 +51,25 @@ class DeviceController(private val context: Context) {
                     open(intent)
                     "Opening your messaging app. Review and send the message yourself."
                 }
+                command.contains("flashlight") || command.contains("torch") -> setFlashlight(
+                    !(command.contains("off") || command.contains("disable") || command.contains("turn off"))
+                )
+                command.contains("volume up") || command.contains("increase volume") -> {
+                    audio().adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                    "Media volume increased."
+                }
+                command.contains("volume down") || command.contains("decrease volume") -> {
+                    audio().adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                    "Media volume decreased."
+                }
+                command.contains("mute volume") || command == "mute" -> {
+                    audio().adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+                    "Media volume muted."
+                }
+                command.contains("unmute volume") || command == "unmute" -> {
+                    audio().adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
+                    "Media volume unmuted."
+                }
                 command.contains("battery settings") -> {
                     open(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)); "Opening battery settings."
                 }
@@ -68,6 +91,20 @@ class DeviceController(private val context: Context) {
         } catch (e: Exception) {
             "I couldn't complete that phone action: ${e.message ?: "Android did not allow it"}."
         }
+    }
+
+    private fun audio() = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    private fun setFlashlight(enabled: Boolean): String {
+        if (context.checkSelfPermission(android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            return "Please grant JARVIS camera permission before using the flashlight."
+        }
+        val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val cameraId = manager.cameraIdList.firstOrNull {
+            manager.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        } ?: return "This phone does not report a flashlight."
+        manager.setTorchMode(cameraId, enabled)
+        return if (enabled) "Flashlight turned on." else "Flashlight turned off."
     }
 
     private fun setAlarm(command: String): String {
