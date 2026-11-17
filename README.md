@@ -5,11 +5,11 @@ A native Android assistant inspired by the feature direction of FatihMakes' open
 ## Implemented features
 
 - Kotlin + Jetpack Compose JARVIS interface.
-- Gemini and OpenAI chat providers; the active provider is remembered.
+- OpenRouter chat integration with a configurable model (default: openai/gpt-4o-mini).
 - API keys encrypted locally with AndroidX Security Crypto.
 - Android speech-to-text input and spoken replies.
 - User-started foreground voice service: say "OK JARVIS", "Okay Jarvis", or "Hey Jarvis", then give a command. The service captures the next utterance, runs an allow-listed phone action or sends it to the selected AI, speaks the result, and resumes listening.
-- Persistent local conversation history in a private SQLite database. Recent turns are included as context for subsequent Gemini/OpenAI requests and restored in the chat screen.
+- Persistent local conversation history in a private SQLite database. Recent turns are included as context for subsequent OpenRouter requests and restored in the chat screen.
 - Clear-memory control in the app.
 - Android action commands currently supported:
   - Open Settings, Wi-Fi, Bluetooth, Display, Sound, Battery, Notifications and Do Not Disturb settings.
@@ -46,9 +46,9 @@ The GitHub Actions workflow builds a debug APK on pushes to `main` and can be ru
 
 ## Run
 
-Install the debug APK on an Android device. Select Gemini or OpenAI, enter the matching API key and save it. Start the voice listener switch and grant microphone/notification permissions. Grant camera permission if you want flashlight control. Cloud AI requests require internet access and a valid provider API key.
+Install the debug APK on an Android device. Create an API key at https://openrouter.ai/keys, enter it in JARVIS and save it. The default model is openai/gpt-4o-mini; requests use OpenRouter's chat completions API. Start the voice listener switch and grant microphone/notification permissions. Grant camera permission if you want flashlight control. Cloud AI requests require internet access and a valid provider API key.
 
-"Independent phone operation" means the app runs on the phone without a PC. Gemini and OpenAI are cloud services, so AI conversations require internet access; this build is not an offline LLM.
+"Independent phone operation" means the app runs on the phone without a PC. OpenRouter are cloud services, so AI conversations require internet access; this build is not an offline LLM.
 
 ## Upstream attribution and license
 
