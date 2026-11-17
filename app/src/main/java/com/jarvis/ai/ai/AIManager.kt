@@ -16,13 +16,14 @@ import java.util.concurrent.TimeUnit
 enum class AIProvider { GEMINI, OPENAI }
 
 class AIManager(context: Context) {
+    private val appContext = context.applicationContext
     private val secrets = EncryptedSharedPreferences.create(
-        context,
-        "jarvis_secure_settings",
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+        appContext, "jarvis_secure_settings",
+        MasterKey.Builder(appContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
+    private val memory = ConversationMemory(appContext)
     private val client = OkHttpClient.Builder().callTimeout(60, TimeUnit.SECONDS).build()
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
@@ -31,52 +32,61 @@ class AIManager(context: Context) {
     }
 
     fun hasApiKey(provider: AIProvider): Boolean = !secrets.getString(keyName(provider), null).isNullOrBlank()
+    fun clearMemory() = memory.clear()
 
     suspend fun ask(provider: AIProvider, prompt: String): String = withContext(Dispatchers.IO) {
         val key = secrets.getString(keyName(provider), null)?.takeIf { it.isNotBlank() }
-            ?: throw IllegalStateException("Add your ${provider.name} API key in Settings first.")
-
+            ?: throw IllegalStateException("Add your ${provider.name} API key in the app first.")
+        val history = memory.recent(12)
+        val systemPrompt = "You are JARVIS, a concise, capable Android personal assistant. You can explain Android actions, but never claim to have changed device settings unless the app confirms it. Use the conversation history for continuity."
         val payload: JSONObject
         val request: Request
+
         if (provider == AIProvider.GEMINI) {
-            payload = JSONObject().put("contents", JSONArray().put(
-                JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt)))
-            ))
+            val contents = JSONArray()
+            history.forEach { (role, text) ->
+                contents.put(JSONObject().put("role", if (role == "assistant") "model" else "user")
+                    .put("parts", JSONArray().put(JSONObject().put("text", text))))
+            }
+            contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", prompt))))
+            payload = JSONObject()
+                .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", systemPrompt))))
+                .put("contents", contents)
             request = Request.Builder()
                 .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
                 .addHeader("x-goog-api-key", key)
-                .post(payload.toString().toRequestBody(jsonType))
-                .build()
+                .post(payload.toString().toRequestBody(jsonType)).build()
         } else {
-            payload = JSONObject().put("model", "gpt-4o-mini").put("messages", JSONArray().put(
-                JSONObject().put("role", "user").put("content", prompt)
-            ))
+            val messages = JSONArray().put(JSONObject().put("role", "system").put("content", systemPrompt))
+            history.forEach { (role, text) -> messages.put(JSONObject().put("role", role).put("content", text)) }
+            messages.put(JSONObject().put("role", "user").put("content", prompt))
+            payload = JSONObject().put("model", "gpt-4o-mini").put("messages", messages)
             request = Request.Builder()
                 .url("https://api.openai.com/v1/chat/completions")
                 .addHeader("Authorization", "Bearer $key")
-                .post(payload.toString().toRequestBody(jsonType))
-                .build()
+                .post(payload.toString().toRequestBody(jsonType)).build()
         }
 
-        client.newCall(request).execute().use { response ->
+        val answer = client.newCall(request).execute().use { response ->
             val raw = response.body?.string().orEmpty()
             if (!response.isSuccessful) {
                 val detail = runCatching { JSONObject(raw).optJSONObject("error")?.optString("message") }.getOrNull()
                 throw IllegalStateException(detail?.takeIf { it.isNotBlank() } ?: "AI request failed (HTTP ${response.code}).")
             }
             val json = JSONObject(raw)
-            val answer = if (provider == AIProvider.GEMINI) {
+            val text = if (provider == AIProvider.GEMINI) {
                 json.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")
                     ?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")
             } else {
                 json.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.optString("content")
             }
-            answer?.takeIf { it.isNotBlank() } ?: "The AI service returned an empty response."
+            text?.takeIf { it.isNotBlank() } ?: "The AI service returned an empty response."
         }
+        memory.add("user", prompt)
+        memory.add("assistant", answer)
+        answer
     }
 
-    private fun keyName(provider: AIProvider) = when (provider) {
-        AIProvider.GEMINI -> "gemini_api_key"
-        AIProvider.OPENAI -> "openai_api_key"
-    }
+    private fun keyName(provider: AIProvider) =
+        if (provider == AIProvider.GEMINI) "gemini_api_key" else "openai_api_key"
 }
