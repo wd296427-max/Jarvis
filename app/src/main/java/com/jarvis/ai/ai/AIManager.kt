@@ -36,6 +36,7 @@ class AIManager(context: Context) {
     fun activeProvider(): AIProvider = runCatching {
         AIProvider.valueOf(secrets.getString("active_provider", AIProvider.GEMINI.name)!!)
     }.getOrDefault(AIProvider.GEMINI)
+    fun recentConversation(): List<Pair<String, String>> = memory.recent(40)
     fun clearMemory() = memory.clear()
 
     suspend fun ask(provider: AIProvider, prompt: String): String = withContext(Dispatchers.IO) {
