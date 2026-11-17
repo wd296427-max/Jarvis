@@ -77,14 +77,14 @@ class DeviceController(private val context: Context) {
                     open(Intent("android.media.action.IMAGE_CAPTURE")); "Opening the camera."
                 }
                 command.contains("open clock") || command == "clock" -> {
-                    open(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CLOCK)); "Opening Clock."
+                    open(Intent(AlarmClock.ACTION_SHOW_ALARMS)); "Opening Clock."
                 }
                 command.startsWith("set an alarm") || command.startsWith("set alarm") -> setAlarm(command)
                 command.startsWith("open app ") -> launchApp(rawCommand.substringAfter("open app ", "").trim())
                 command.startsWith("launch app ") -> launchApp(rawCommand.substringAfter("launch app ", "").trim())
                 command.startsWith("open ") -> launchKnownApp(rawCommand.substringAfter("open ").trim()) ?: launchApp(rawCommand.substringAfter("open ").trim())
                 command.contains("open notifications") || command == "notifications" -> {
-                    open(Intent(Settings.ACTION_NOTIFICATION_SETTINGS)); "Opening notification settings."
+                    open(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)); "Opening notification settings."
                 }
                 else -> null
             }
