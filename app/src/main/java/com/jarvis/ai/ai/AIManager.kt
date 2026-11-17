@@ -32,6 +32,10 @@ class AIManager(context: Context) {
     }
 
     fun hasApiKey(provider: AIProvider): Boolean = !secrets.getString(keyName(provider), null).isNullOrBlank()
+    fun setActiveProvider(provider: AIProvider) { secrets.edit().putString("active_provider", provider.name).apply() }
+    fun activeProvider(): AIProvider = runCatching {
+        AIProvider.valueOf(secrets.getString("active_provider", AIProvider.GEMINI.name)!!)
+    }.getOrDefault(AIProvider.GEMINI)
     fun clearMemory() = memory.clear()
 
     suspend fun ask(provider: AIProvider, prompt: String): String = withContext(Dispatchers.IO) {
