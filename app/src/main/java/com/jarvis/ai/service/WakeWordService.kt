@@ -53,9 +53,9 @@ class WakeWordService : Service(), RecognitionListener, TextToSpeech.OnInitListe
         tts = TextToSpeech(this, this)
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) { }
-            override fun onDone(utteranceId: String?) { handler.post { scheduleListen(350) } }
+            override fun onDone(utteranceId: String?) { handler.post { processing = false; statusUpdate("Listening • say OK JARVIS"); scheduleListen(350) } }
             @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String?) { handler.post { scheduleListen(900) } }
+            override fun onError(utteranceId: String?) { handler.post { processing = false; scheduleListen(900) } }
         })
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             speak("Speech recognition is not available on this phone.")
