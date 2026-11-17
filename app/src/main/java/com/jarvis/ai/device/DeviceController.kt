@@ -22,10 +22,10 @@ class DeviceController(private val context: Context) {
                 command in listOf("open settings", "settings", "phone settings") -> {
                     open(Intent(Settings.ACTION_SETTINGS)); "Opening Android Settings."
                 }
-                command.contains("wi-fi settings") || command.contains("wifi settings") || command == "open wifi" -> {
+                command.contains("wi-fi") || command.contains("wifi") -> {
                     open(Intent(Settings.ACTION_WIFI_SETTINGS)); "Opening Wi-Fi settings. You can change the network there."
                 }
-                command.contains("bluetooth settings") || command == "open bluetooth" -> {
+                command.contains("bluetooth") -> {
                     open(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)); "Opening Bluetooth settings."
                 }
                 command.contains("display settings") || command.contains("brightness settings") -> {
