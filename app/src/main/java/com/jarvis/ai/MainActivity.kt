@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.jarvis.ai.ai.AIManager
-import com.jarvis.ai.ai.AIProvider
 import com.jarvis.ai.service.WakeWordService
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -85,7 +84,6 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
     val context = LocalContext.current
     val ai = remember { AIManager(context.applicationContext) }
     val scope = rememberCoroutineScope()
-    var provider by remember { mutableStateOf(ai.activeProvider()) }
     var apiKey by remember { mutableStateOf("") }
     var keySaved by remember { mutableStateOf(false) }
     var prompt by remember { mutableStateOf("") }
@@ -97,7 +95,7 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
             ai.recentConversation().forEach { (role, text) ->
                 add(ChatMessage(if (role == "assistant") "JARVIS" else "YOU", text))
             }
-            if (isEmpty()) add(ChatMessage("JARVIS", "Good day. I am online. Choose Gemini or OpenAI, save your API key, and start a conversation."))
+            if (isEmpty()) add(ChatMessage("JARVIS", "Good day. I am online. Add your OpenRouter API key, then start a conversation."))
         }
     }
 
@@ -114,9 +112,9 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
         prompt = ""
         messages.add(ChatMessage("YOU", question))
         busy = true
-        status = "THINKING • ${provider.name}"
+        status = "THINKING • OPENROUTER"
         scope.launch {
-            val answer = runCatching { ai.ask(provider, question) }
+            val answer = runCatching { ai.ask(question) }
                 .getOrElse { "I couldn't complete that request. ${it.message ?: "Please check your connection and API key."}" }
             messages.add(ChatMessage("JARVIS", answer))
             onSpeak(answer)
@@ -145,21 +143,15 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
 
             Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("AI ENGINE", color = Cyan, style = MaterialTheme.typography.labelLarge)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = provider == AIProvider.GEMINI, onClick = {
-                            provider = AIProvider.GEMINI; ai.setActiveProvider(provider); apiKey = ""; keySaved = false
-                        }, label = { Text("Gemini") })
-                        FilterChip(selected = provider == AIProvider.OPENAI, onClick = {
-                            provider = AIProvider.OPENAI; ai.setActiveProvider(provider); apiKey = ""; keySaved = false
-                        }, label = { Text("OpenAI") })
-                        Spacer(Modifier.weight(1f))
-                        Text(if (keySaved || ai.hasApiKey(provider)) "KEY SAVED" else "NO KEY", color = if (keySaved || ai.hasApiKey(provider)) Cyan else Color.LightGray, style = MaterialTheme.typography.labelSmall)
+                    Text("OPENROUTER AI ENGINE", color = Cyan, style = MaterialTheme.typography.labelLarge)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Model: ${ai.model()}", color = Color.LightGray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                        Text(if (keySaved || ai.hasApiKey()) "KEY SAVED" else "NO KEY", color = if (keySaved || ai.hasApiKey()) Cyan else Color.LightGray, style = MaterialTheme.typography.labelSmall)
                     }
                     OutlinedTextField(
                         value = apiKey, onValueChange = { apiKey = it; keySaved = false },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("${provider.name} API key") },
+                        label = { Text("OpenRouter API key") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
@@ -174,7 +166,7 @@ private fun JarvisScreen(onStart: () -> Unit, onStop: () -> Unit, onSpeak: (Stri
                         Button(
                             enabled = apiKey.isNotBlank(),
                             onClick = {
-                                ai.saveApiKey(provider, apiKey)
+                                ai.saveApiKey(apiKey)
                                 apiKey = ""
                                 keySaved = true
                             },
